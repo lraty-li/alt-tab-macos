@@ -102,7 +102,6 @@ final class QAMenu: NSPanel {
         topRow.trailingAnchor.constraint(equalTo: stack.trailingAnchor, constant: -stack.edgeInsets.right).isActive = true
         stack.addArrangedSubview(graphCheckbox)
         stack.addArrangedSubview(langDropdown)
-        addProTransitionButtons()
     }
 
     /// Wipe every UserDefaults suite the app uses plus every keychain entry under the license service,

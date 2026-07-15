@@ -459,8 +459,7 @@ class AppearanceTab: NSObject {
             toggleCustomizeStyleButton()
             ControlsTab.syncOverrideControlsToGlobal()
             refreshAllOverrideInfoLabels()
-        }, buttonSpacing: 10, proGatedIndices: proGatedAppearanceStyleIndices())
-        addProBadgesToStyleButtons(styleButtons)
+        }, buttonSpacing: 10, proGatedIndices: [])
         styleButtonsStack = styleButtons
         // For the style row, the control is a horizontal stack of style cards centered in the row.
         // Wrap [styleButtons, overrideIcon] in another HStack so the icon trails the cards — same
@@ -476,18 +475,7 @@ class AppearanceTab: NSObject {
             ControlsTab.syncOverrideControlsToGlobal()
             refreshAllOverrideInfoLabels()
         })
-        wrapAppearanceSizeProLockIntercept(sizeControl)
         sizeControlRef = sizeControl
-        let autoOverlay = addProBadgeToAutoSegment(sizeControl)
-        autoSegmentOverlayRef = autoOverlay
-        // AppKit re-resolves segment label/background colors on window-key transitions but doesn't
-        // notify our overlay subviews. Hook the badge's own key-state observer to trigger our
-        // resync (which calls `needsDisplay` on the icon/label so their `colorProvider`-driven
-        // `viewWillDraw` picks up the new state).
-        autoOverlay.badge.onWindowKeyChanged = { [weak sizeControl] in
-            guard let sizeControl else { return }
-            refreshAutoSegmentAppearance(sizeControl)
-        }
         table.addRow(leftText: AppearanceTab.labelSize,
             rightViews: [sizeControl, makeOverrideIcon("appearanceSizeOverride")])
         table.addRow(leftText: AppearanceTab.labelTheme,
@@ -564,20 +552,12 @@ class AppearanceTab: NSObject {
     }
 
     private static func addAfterKeysReleasedRow(_ table: TableGroupView) {
-        let proIndex = ShortcutStylePreference.allCases.firstIndex(of: .searchOnRelease)!
         let control = LabelAndControl.makeSegmentedControl("shortcutStyle", ShortcutStylePreference.allCases, segmentWidth: 105, extraAction: { control in
             refreshShortcutStyleSegmentAppearance(control as! NSSegmentedControl)
             ControlsTab.syncOverrideControlsToGlobal()
             refreshAllOverrideInfoLabels()
         })
-        wrapShortcutStyleProLockIntercept(control, proIndex: proIndex)
         shortcutStyleControlRef = control
-        let shortcutStyleOverlay = addProBadgeToShortcutStyleSegment(control, proIndex: proIndex)
-        shortcutStyleSegmentOverlayRef = shortcutStyleOverlay
-        shortcutStyleOverlay.badge.onWindowKeyChanged = { [weak control] in
-            guard let control else { return }
-            refreshShortcutStyleSegmentAppearance(control)
-        }
         table.addRow(leftText: AppearanceTab.labelShortcutStyle,
             rightViews: [control, makeOverrideIcon("shortcutStyleOverride")])
     }
@@ -699,7 +679,7 @@ class AppearanceTab: NSObject {
 
     /// Indices of `AppearanceStylePreference.allCases` that are Pro-only (everything but `.thumbnails`).
     static func proGatedAppearanceStyleIndices() -> Set<Int> {
-        Set(AppearanceStylePreference.allCases.enumerated().compactMap { $0.element == .thumbnails ? nil : $0.offset })
+        []
     }
 
     /// Re-sync the 3 Pro-aware controls to the currently-stored preferences and the ghost state.

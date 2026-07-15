@@ -395,7 +395,6 @@ class SettingsWindow: NSWindow {
     private func setupSidebar() {
         setupSearchField(sidebarContainer)
         setupQuitButton(sidebarContainer)
-        setupUpgradeButton(sidebarContainer)
         setupSidebarTable(sidebarContainer)
         // Match macOS System Settings: Tab cycles between the search field and the sidebar
         // table only. The nextValidKeyView overrides on these two subclasses keep AppKit's
@@ -497,7 +496,7 @@ class SettingsWindow: NSWindow {
             // too far in.
             sidebarScrollView.leadingAnchor.constraint(equalTo: parent.leadingAnchor),
             sidebarScrollView.trailingAnchor.constraint(equalTo: parent.trailingAnchor),
-            sidebarScrollView.bottomAnchor.constraint(equalTo: upgradeButton.topAnchor, constant: -10),
+            sidebarScrollView.bottomAnchor.constraint(equalTo: quitButton.topAnchor, constant: -10),
         ])
     }
 
@@ -1157,9 +1156,7 @@ class SettingsWindow: NSWindow {
         sectionsStackBottomConstraint.isActive = true
     }
 
-    func refreshUpgradeButton() {
-        upgradeButton.refreshTitle()
-    }
+    func refreshUpgradeButton() { }
 
     private func selectSection(_ section: SettingsSection, scroll: Bool, selectInSidebar: Bool = true) {
         hideUpgradeView()
@@ -1246,9 +1243,6 @@ extension SettingsWindow: NSWindowDelegate {
         }
         guard !hasPlayedShine else { return }
         hasPlayedShine = true
-        DispatchQueue.main.asyncAfter(deadline: .now() + 1) { [weak self] in
-            self?.upgradeButton.playShineAnimation()
-        }
     }
 
     func windowWillClose(_ notification: Notification) {

@@ -464,20 +464,15 @@ class UpgradeTab {
 
     static func navigateToUpgradeTab() {
         App.showSettingsWindow()
-        SettingsWindow.shared?.showUpgradeView()
     }
 
     static func showAutoActivating(_ licenseKey: String) {
-        navigateToUpgradeTab()
     }
 
     static func showAutoActivationSuccess() {
-        refreshStatus()
     }
 
     static func showAutoActivationFailed(_ licenseKey: String) {
-        navigateToUpgradeTab()
-        presentActivationSheet(prefilledKey: licenseKey, autoFailedHint: true)
     }
 }
 
