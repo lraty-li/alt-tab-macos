@@ -64,6 +64,7 @@ class App: AppCenterApplication {
         Logger.info { "active:\(SwitcherSession.isActive)" }
         guard SwitcherSession.current != nil else { return } // already hidden
         SwitcherSession.current = nil
+        KeyboardEvents.updateEscapeAbsorptionTap() // session closed: stop tapping keyDown (#5766)
         UsageStats.resetSession()
         TilesView.endSearchSession()
         ContextMenuEvents.toggle(false)
@@ -311,6 +312,7 @@ class App: AppCenterApplication {
         let session = SwitcherSession.current ?? {
             let new = SwitcherSession()
             SwitcherSession.current = new
+            KeyboardEvents.updateEscapeAbsorptionTap() // session opened: enable Esc keyDown tap if bound (#5585)
             return new
         }()
         session.forceDoNothingOnRelease = forceDoNothingOnRelease_
@@ -396,7 +398,6 @@ class App: AppCenterApplication {
         _ = PreviewPanel()
         Spaces.refresh()
         Screens.refresh()
-        SpacesEvents.observe()
         ScreensEvents.observe()
         SystemAppearanceEvents.observe()
         SystemScrollerStyleEvents.observe()
@@ -442,14 +443,29 @@ extension App: NSApplicationDelegate {
         App.shared.disableRelaunchOnLogin()
         Logger.initialize()
         Logger.info { "Launching AltTab \(App.version)" }
+        // Create the background queues first, before anything that can pump the main run loop re-entrantly
+        // (the "move to /Applications" modal below, the WindowServer tap's discovery). Window.init reads
+        // BackgroundWork.screenshotsQueue (an implicitly-unwrapped optional) via Application.fetchAppIcon, so
+        // if a queued discovery block drains re-entrantly before this runs, it traps on the nil queue (#5819).
+        // preStart just allocates queues and depends on nothing, so it's safe at the very top.
+        BackgroundWork.preStart()
+        // Handle the "move to /Applications" prompt before anything else sets up the model. It runs a modal
+        // alert (and may relaunch + exit), both of which pump the main run loop, so it must come before the
+        // WindowServer tap below: otherwise the tap's queued window discovery drains re-entrantly during the
+        // modal and builds a Window while the model is half-built. A translocated instance the user moves
+        // relaunches from /Applications, so the setup we skip by returning here early is thrown away anyway.
         #if DEBUG
         UserDefaults.standard.set(true, forKey: "NSConstraintBasedLayoutVisualizeMutuallyExclusiveConstraints")
-        #endif
-        #if !DEBUG
+        #else
         MoveToApplicationsFolder.promptIfNeeded()
         #endif
+        // The WindowServer event tap is CGS-only (needs no Accessibility, no Preferences, no model), so
+        // install it before licensing / the permission gate. The skeleton is then available immediately and
+        // independent of whether the user has granted AX.
+        WindowServerEvents.observe()
         AXUIElement.setGlobalTimeout()
         Preferences.initialize()
+        PreferencesPersistenceCheck.runInBackground()
         LicenseManager.shared.onBeforeProUnlock = { ProTransitionManager.shared.onProUnlocked() }
         LicenseManager.shared.onStateChanged = { state in
             Menubar.refreshLicenseMenuItems()
@@ -462,8 +478,12 @@ extension App: NSApplicationDelegate {
             // Notify UI observers so Settings rows repaint their ghost/pro-locked styling.
             NotificationCenter.default.post(name: ProTransitionManager.proLockStateDidChangeNotification, object: nil)
         }
+        #if DEBUG
+        // test affordance: `--mock-pro` skips the license keychain round-trip (which prompts/hangs for an
+        // ad-hoc build whose signature doesn't match the real app's keychain items). See QAMenu's Pro button.
+        if CommandLine.arguments.contains("--mock-pro") { LicenseManager.shared.mockProUser() }
+        #endif
         LicenseManager.shared.initialize()
-        BackgroundWork.preStart()
         SystemPermissions.ensurePermissionsAreGranted()
     }
 
