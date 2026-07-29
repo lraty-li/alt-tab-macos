@@ -219,7 +219,7 @@ class FeedbackWindow: NSWindow {
 
     private func apply(updateCheckResult result: SparkleDelegate.UpdateCheckResult) {
         switch result {
-        case .updateAvailable(let item): showUpdateAvailableAlert(item: item)
+        case .updateAvailable: showForm()
         case .upToDate: showForm()
         }
     }
