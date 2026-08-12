@@ -6,7 +6,6 @@ class GeneralTab {
     static var menuIconShownToggle: Switch?
     static var updatesPolicyDropdown: NSPopUpButton?
     static var crashPolicyDropdown: NSPopUpButton?
-    static var policyLock = false
 
     static func initTab() -> NSView {
         let startAtLogin = TableGroupView.Row(leftTitle: NSLocalizedString("Start at login", comment: ""),

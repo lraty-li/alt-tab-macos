@@ -41,9 +41,11 @@ class PreferencesEvents {
     static func initialize() {
         guard !initialized else { return }
         initialized = true
-        UserDefaultsEvents.observe()
-        ControlsTab.initializePreferencesDependentState()
+        // Apply the update policy before anything else: `startUpdater()` runs 30s after launch
+        // and must observe the user's policy, never a stale/unapplied Sparkle default.
+        migrateUpdatePolicyToManualIfNeeded()
         applyUpdatePolicyPreference()
+        ControlsTab.initializePreferencesDependentState()
         TrackpadEvents.toggle(Preferences.nextWindowGesture != .disabled)
         DispatchQueue.main.asyncAfter(deadline: .now() + 2) {
             LoginItem.applyCurrentPreference()
@@ -79,11 +81,28 @@ class PreferencesEvents {
         Menubar.menubarIconCallback(nil)
     }
 
+    /// One-time convergence of existing installs onto `.manual`.
+    ///
+    /// This fork has no release channel of its own: the appcast points at the upstream repo, so
+    /// automatic checks only ever surface update prompts for the upstream build (which would
+    /// overwrite this fork's features). On top of that, the removed `UserDefaultsEvents`
+    /// reverse-sync could silently rewrite `updatePolicy` back to `.autoCheck` — the state this
+    /// migration heals. Users who explicitly pick a periodic policy afterwards keep it: the
+    /// marker prevents this from running again.
+    private static func migrateUpdatePolicyToManualIfNeeded() {
+        let markerKey = "didMigrateUpdatePolicyToManual"
+        guard !UserDefaults.standard.bool(forKey: markerKey) else { return }
+        UserDefaults.standard.set(true, forKey: markerKey)
+        if Preferences.updatePolicy != .manual {
+            Preferences.set("updatePolicy", UpdatePolicyPreference.manual.indexAsString, false)
+        }
+    }
+
+    /// `updatePolicy` is the single source of truth; Sparkle's `SUEnableAutomaticChecks` /
+    /// `SUAutomaticallyUpdate` keys are written only here, never read back.
     private static func applyUpdatePolicyPreference() {
-        GeneralTab.policyLock = true
         let policy = Preferences.updatePolicy
         App.updaterController?.updater.automaticallyDownloadsUpdates = policy == .autoInstall
         App.updaterController?.updater.automaticallyChecksForUpdates = policy == .autoInstall || policy == .autoCheck
-        GeneralTab.policyLock = false
     }
 }

@@ -60,8 +60,10 @@
 	<!-- ===== Sparkle (auto-update framework — reads these directly from the bundle) ===== -->
 	<key>SUPublicEDKey</key>
 	<string>2e9SQOBoaKElchSa/4QDli/nvYkyuDNfynfzBF6vJK4=</string>
+	<!-- Automatic checks default to off: this fork's appcast points at the upstream repo, so
+	     periodic checks would only surface upstream update prompts. Users opt in explicitly. -->
 	<key>SUEnableAutomaticChecks</key>
-	<string>true</string>
+	<string>false</string>
 	<key>SUScheduledCheckInterval</key>
 	<string>604800</string>
 
